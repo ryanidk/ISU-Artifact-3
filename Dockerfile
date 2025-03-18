@@ -10,4 +10,4 @@ RUN pip install -r requirements.txt
 
 EXPOSE 8080
 
-CMD exec gunicorn --bind :58526 --workers 4 --timeout 3600 --threads 8 wsgi:app
+CMD exec gunicorn --bind :42178 --workers 4 --timeout 3600 --threads 8 wsgi:app
