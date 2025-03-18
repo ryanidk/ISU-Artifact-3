@@ -1,0 +1,6 @@
+Flask
+gunicorn
+groq
+pyjwt
+requests
+cryptography

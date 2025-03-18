@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISU Artifact 2 - Data Stock Grapher</title>
+
+    <link rel="stylesheet" href="https://use.typekit.net/cgs2wwr.css">
+    <script type="text/javascript" src="{{ url_for('static', filename='canvasjs.stock.min.js') }}"></script>
+
+    <style>
+        body {
+            font-family: 'proxima-nova', sans-serif;
+            background-color: #eef2f7;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 2.5rem;
+            color: #2c3e50;
+        }
+
+        .menu {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #3498db;
+            border-radius: 8px;
+            overflow: hidden;
+            text-align: center;
+            margin: 0 auto 20px;
+            padding: 0;
+            width: fit-content;
+            position: relative;
+
+        }
+
+
+        .menu a {
+            display: inline-block;
+            color: white;
+            padding: 14px 16px;
+            text-decoration: none;
+            font-weight: 600;
+            font-family: 'proxima-nova', sans-serif;
+        }
+
+        .menu a:hover {
+            background-color: #2980b9;
+        }
+
+        .section {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .chart {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            min-height: 500px;
+            overflow: hidden;
+            position: relative;
+        }
+
+
+        h2 {
+            margin-bottom: 15px;
+            color: #34495e;
+        }
+
+
+        h3 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.5rem;
+            color: #442c50;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            background-color: #f9f9f9;
+            font-family: 'proxima-nova', sans-serif;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-family: 'proxima-nova', sans-serif;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>ISU Artifact 2 - Data</h1>
+    <a href="https://github.com/ryanidk/ISU-Artifact-2"><h3>View Source Code</h3></a>
+
+    <div class="menu">
+        <a href="/">Calculator</a>
+        <a href="/grapher">Grapher</a>
+        <a href="/stock-grapher">Stock Grapher</a>
+        <a href="/weather-grapher">Weather Grapher</a>
+    </div>
+
+    <div id="grapher" class="section">
+        <h2>Stock Grapher</h2>
+
+        <label for="ticker">Enter ticker:</label>
+        <input type="text" id="ticker" name="data" placeholder="e.g., AAPL, MSFT">
+        <button onclick="loadStockChart()">Graph</button>
+
+    </div>
+
+    <div id="chartContainer" class="chart hidden"></div>
+
+    <script>
+        let stockChart;
+        let currentRangeType = "ALL";
+        let cachedData = {
+            "1m": [],
+            "15m": [],
+            "1h": [],
+            "1d": [],
+        };
+        let lastTicker = "";
+
+        function combineData() {
+            const allData = new Map();
+
+            cachedData["1d"].forEach((point) => {
+                allData.set(point.x.getTime(), point);
+            });
+
+            cachedData["1h"].forEach((point) => {
+                allData.set(point.x.getTime(), point);
+            });
+
+            cachedData["15m"].forEach((point) => {
+                allData.set(point.x.getTime(), point);
+            });
+
+            cachedData["1m"].forEach((point) => {
+                allData.set(point.x.getTime(), point);
+            });
+
+            return Array.from(allData.values()).sort((a, b) => a.x - b.x);
+        }
+
+        function getDateRange(rangeType) {
+            const now = new Date();
+            const startDate = new Date(now);
+
+            switch (rangeType) {
+                case "1D":
+                    startDate.setDate(now.getDate() - 1);
+                    return {start: startDate, interval: "1m"};
+                case "5D":
+                    startDate.setDate(now.getDate() - 5);
+                    return {start: startDate, interval: "1m"};
+                case "1M":
+                    startDate.setMonth(now.getMonth() - 1);
+                    return {start: startDate, interval: "15m"};
+                case "6M":
+                    startDate.setMonth(now.getMonth() - 6);
+                    return {start: startDate, interval: "1h"};
+                case "YTD":
+                    startDate.setFullYear(now.getFullYear(), 0, 1);
+                    return {start: startDate, interval: "1h"};
+                case "1Y":
+                    startDate.setFullYear(now.getFullYear() - 1);
+                    return {start: startDate, interval: "1h"};
+                case "5Y":
+                    startDate.setFullYear(now.getFullYear() - 5);
+                    return {start: startDate, interval: "1d"};
+                case "ALL":
+                    startDate.setFullYear(1970);
+                    return {start: startDate, interval: "1d"};
+                default:
+                    return {start: startDate, interval: "1d"};
+            }
+        }
+
+        async function loadAllResolutionData(ticker) {
+            const now = Math.floor(new Date().getTime() / 1000);
+            const oneDayAgo = now - 24 * 60 * 60;
+            const fiveDaysAgo = now - 5 * 24 * 60 * 60;
+            const oneMonthAgo = now - 30 * 24 * 60 * 60;
+            const oneYearAgo = now - 365 * 24 * 60 * 60;
+            const epochStart = Math.floor(new Date(1970, 0, 1).getTime() / 1000);
+
+            try {
+                await Promise.all([
+                    fetchAndCacheData(ticker, "1m", fiveDaysAgo, now, "1m"),
+                    fetchAndCacheData(ticker, "15m", oneMonthAgo, fiveDaysAgo, "15m"),
+                    fetchAndCacheData(ticker, "1h", oneYearAgo, oneMonthAgo, "1h"),
+                    fetchAndCacheData(ticker, "1d", epochStart, oneYearAgo, "1d"),
+                ]);
+                return true;
+            } catch (error) {
+                console.error("Error loading historical data:", error);
+                return false;
+            }
+        }
+
+        async function fetchAndCacheData(ticker, interval, start, end, cacheKey) {
+            const apiUrl = `https://cloudflare-cors-anywhere.cewok93296.workers.dev/?https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?period1=${start}&period2=${end}&interval=${interval}`;
+
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+
+            if (data.chart && data.chart.result) {
+                const result = data.chart.result[0];
+                cachedData[cacheKey] = transformData(
+                    result.timestamp,
+                    result.indicators.quote[0]
+                );
+            }
+        }
+
+        function transformData(timestamps, quotes) {
+            return timestamps
+                .map((timestamp, i) => ({
+                    x: new Date(timestamp * 1000),
+                    y: quotes.close[i],
+                    volume: quotes.volume[i],
+                }))
+                .filter((point) => point.y != null && point.volume != null);
+        }
+
+        function getAppropriateData(rangeType) {
+            const dateRange = getDateRange(rangeType);
+            const combinedData = combineData();
+
+            return [
+                combinedData,
+                combinedData.filter((point) => point.x >= dateRange.start),
+            ];
+        }
+
+        async function fetchDataAndUpdateChart(rangeType) {
+            currentRangeType = rangeType;
+            const ticker = document.getElementById("ticker").value || "";
+
+            if (
+                Object.values(cachedData).every((arr) => arr.length === 0) ||
+                ticker != lastTicker
+            ) {
+                await loadAllResolutionData(ticker);
+            }
+            lastTicker = ticker;
+
+            const allData = getAppropriateData(rangeType);
+
+            const filteredData = allData[0];
+            const fineData = allData[1];
+            updateChart(filteredData, fineData, rangeType, ticker);
+        }
+
+        function updateChart(data, fineData, rangeType, ticker) {
+            const dpsLine = data.map((d) => ({x: d.x, y: d.y}));
+            const dpsVolume = data.map((d) => ({x: d.x, y: d.volume}));
+
+            const firstPrice = fineData[0]?.y;
+            const lastPrice = fineData[fineData.length - 1]?.y;
+            const lineColor = lastPrice > firstPrice ? "#00873c" : "#ff4444";
+
+            if (
+                stockChart &&
+                stockChart.title.get("text").includes(ticker.toUpperCase())
+            ) {
+                stockChart.charts[0].data[0].set("dataPoints", dpsLine);
+                stockChart.charts[0].data[0].set("color", lineColor);
+                stockChart.charts[1].data[0].set("dataPoints", dpsVolume);
+                stockChart.navigator.data[0].set("dataPoints", dpsLine);
+                stockChart.navigator.slider.set("minimum", data[0]?.x);
+                stockChart.navigator.slider.set("maximum", data[data.length - 1]?.x);
+                stockChart.render();
+            } else {
+                stockChart = new CanvasJS.StockChart("chartContainer", {
+                    theme: "light2",
+                    exportEnabled: true,
+                    title: {
+                        text: `${ticker.toUpperCase()} Stock Chart`,
+                        fontFamily: "proxima-nova",
+                    },
+                    rangeSelector: {
+                        enabled: true,
+                        buttons: [
+                            {
+                                label: "1D",
+                                range: 1,
+                                rangeType: "day",
+                            },
+                            {
+                                label: "5D",
+                                range: 5,
+                                rangeType: "day",
+                            },
+                            {
+                                label: "1M",
+                                range: 1,
+                                rangeType: "month",
+                            },
+                            {
+                                label: "6M",
+                                range: 6,
+                                rangeType: "month",
+                            },
+                            {
+                                label: "YTD",
+                                range: 1,
+                                rangeType: "ytd",
+                            },
+                            {
+                                label: "1Y",
+                                range: 1,
+                                rangeType: "year",
+                            },
+                            {
+                                label: "5Y",
+                                range: 5,
+                                rangeType: "year",
+                            },
+                            {
+                                label: "ALL",
+                                range: null,
+                                rangeType: "all",
+                            },
+                        ],
+                        inputFields: {
+                            enabled: true,
+                            fontFamily: "proxima-nova",
+                        },
+                    },
+                    rangeChanged: function (e) {
+                        const rangeType =
+                            e.trigger === "rangeSelectorButton"
+                                ? e.button.label
+                                : convertRangeToType(e.minimum, e.maximum);
+                        fetchDataAndUpdateChart(rangeType);
+                    },
+                    charts: [
+                        {
+                            axisX: {
+                                crosshair: {
+                                    enabled: true,
+                                    snapToDataPoint: true,
+                                },
+                                labelFontFamily: "proxima-nova",
+                            },
+                            axisY: {
+                                prefix: "$",
+                                title: "Price (USD)",
+                                titleFontFamily: "proxima-nova",
+                                labelFontFamily: "proxima-nova",
+                            },
+                            data: [
+                                {
+                                    type: "line",
+                                    color: lineColor,
+                                    yValueFormatString: "$#,###.##",
+                                    dataPoints: dpsLine,
+                                },
+                            ],
+                        },
+                        {
+                            height: 100,
+                            axisX: {
+                                crosshair: {
+                                    enabled: true,
+                                    snapToDataPoint: true,
+                                },
+                                labelFontFamily: "proxima-nova",
+                            },
+                            axisY: {
+                                title: "Volume",
+                                titleFontFamily: "proxima-nova",
+                                labelFontFamily: "proxima-nova",
+                                labelFormatter: function (e) {
+                                    if (e.value >= 1e6) return (e.value / 1e6).toFixed(1) + "M";
+                                    else if (e.value >= 1e3)
+                                        return (e.value / 1e3).toFixed(1) + "K";
+                                    else return e.value;
+                                },
+                            },
+                            data: [
+                                {
+                                    type: "column",
+                                    color: "rgba(0, 100, 255, 0.6)",
+                                    dataPoints: dpsVolume,
+                                },
+                            ],
+                        },
+                    ],
+                    navigator: {
+                        axisX: {
+                            labelFontFamily: "proxima-nova",
+                        },
+                        axisY: {
+                            labelFontFamily: "proxima-nova",
+                        },
+                        data: [
+                            {
+                                dataPoints: dpsLine,
+                            },
+                        ],
+                        slider: {
+                            minimum: data[0]?.x,
+                            maximum: data[data.length - 1]?.x,
+                        },
+                    },
+                });
+                stockChart.render();
+            }
+        }
+
+        function convertRangeToType(minimum, maximum) {
+            const diff = maximum - minimum;
+            const days = diff / (1000 * 60 * 60 * 24);
+
+            if (days <= 1) return "1D";
+            if (days <= 5) return "5D";
+            if (days <= 31) return "1M";
+            if (days <= 180) return "6M";
+            if (days <= 365) return "1Y";
+            if (days <= 1825) return "5Y";
+            return "ALL";
+        }
+
+        function loadStockChart() {
+            fetchDataAndUpdateChart(currentRangeType);
+            document.getElementById("chartContainer").classList.remove('hidden');
+        }
+
+    </script>
+
+    <p>Disclaimer: AI-powered features may produce inaccurate or unexpected results. Always verify critical information
+        with additional sources.</p>
+    <p>Ryan L 2024</p>
+</div>
+</body>
+</html>

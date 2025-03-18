@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>ISU Artifact 2 - Data Weather Grapher</title>
+
+    <link rel="stylesheet" href="https://use.typekit.net/cgs2wwr.css"/>
+    <script src="{{ url_for('static', filename='canvasjs.min.js') }}"></script>
+    <script src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
+    <style>
+        body {
+            font-family: "proxima-nova", sans-serif;
+            background-color: #eef2f7;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 2.5rem;
+            color: #2c3e50;
+        }
+
+        .menu {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #3498db;
+            border-radius: 8px;
+            overflow: hidden;
+            text-align: center;
+            margin: 0 auto 20px;
+            padding: 0;
+            width: fit-content;
+        }
+
+        .menu a {
+            display: inline-block;
+            color: white;
+            padding: 14px 16px;
+            text-decoration: none;
+            font-weight: 600;
+            font-family: "proxima-nova", sans-serif;
+        }
+
+        .menu a:hover {
+            background-color: #2980b9;
+        }
+
+        .section {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .chart {
+            margin-top: 20px;
+            border-radius: 10px;
+            min-height: 500px;
+            overflow: hidden;
+        }
+
+        label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            background-color: #f9f9f9;
+            font-family: "proxima-nova", sans-serif;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-family: "proxima-nova", sans-serif;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        h3 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.5rem;
+            color: #442c50;
+        }
+
+        h2 {
+            margin-bottom: 15px;
+            color: #34495e;
+        }
+
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>ISU Artifact 2 - Data</h1>
+    <a href="https://github.com/ryanidk/ISU-Artifact-2"
+    ><h3>View Source Code</h3></a
+    >
+
+    <div class="menu">
+        <a href="/">Calculator</a>
+        <a href="/grapher">Grapher</a>
+        <a href="/stock-grapher">Stock Grapher</a>
+        <a href="/weather-grapher">Weather Grapher</a>
+    </div>
+    <div class="section">
+        <h2>Weather Grapher</h2>
+        <label for="city">Enter city:</label>
+        <input type="text" id="city" placeholder="e.g., Ottawa, Toronto"/>
+        <button onclick="fetchWeatherData()">Graph</button>
+    </div>
+    <div id="currentWeather" class="section hidden">
+        <h2>Current Weather</h2>
+        <p id="currentDetails"></p>
+    </div>
+    <div id="hourlyForecast" class="chart hidden"></div>
+    <div id="chartContainer" class="chart hidden"></div>
+
+    <p>Disclaimer: AI-powered features may produce inaccurate or unexpected results. Always verify critical information
+        with additional sources.</p>
+    <p>Weather features provided by  Weather and <a
+            href="https://developer.apple.com/weatherkit/data-source-attribution/" target="_blank">other sources</a>.
+    </p>
+    <p>Ryan L 2024</p>
+</div>
+<script>
+    const conditions = {
+        Clear: {
+            newname: "Clear",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/sun.max.fill.png",
+        },
+        Cloudy: {
+            newname: "Cloudy",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.fill.png",
+        },
+        Dust: {
+            newname: "Dust",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/sun.dust.fill.png",
+        },
+        Fog: {
+            newname: "Fog",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.fog.fill.png",
+        },
+        Haze: {
+            newname: "Haze",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/sun.haze.fill.png",
+        },
+        MostlyClear: {
+            newname: "Mostly Clear",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.sun.fill.png",
+        },
+        MostlyCloudy: {
+            newname: "Mostly Cloudy",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.fill.png",
+        },
+        PartlyCloudy: {
+            newname: "Partly Cloudy",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.sun.fill.png",
+        },
+        ScatteredThunderstorms: {
+            newname: "Scattered Thunderstorms",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.bolt.rain.fill.png",
+        },
+        Smoke: {
+            newname: "Smoke",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/smoke.fill.png",
+        },
+        Breezy: {
+            newname: "Breezy",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/wind.png",
+        },
+        Windy: {
+            newname: "Windy",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/wind.png",
+        },
+        Drizzle: {
+            newname: "Drizzle",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.drizzle.fill.png",
+        },
+        HeavyRain: {
+            newname: "Heavy Rain",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.heavyrain.fill.png",
+        },
+        Rain: {
+            newname: "Rain",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.rain.fill.png",
+        },
+        Showers: {
+            newname: "Showers",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.showers.fill.png",
+        },
+        Flurries: {
+            newname: "Flurries",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.snow.fill.png",
+        },
+        HeavySnow: {
+            newname: "Heavy Snow",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/snow.png",
+        },
+        MixedRainAndSleet: {
+            newname: "Mixed Rain & Sleet",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.sleet.fill.png",
+        },
+        MixedRainAndSnow: {
+            newname: "Mixed Rain & Snow",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.sleet.fill.png",
+        },
+        MixedRainfall: {
+            newname: "Mixed Rainfall",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.rain.fill.png",
+        },
+        MixedSnowAndSleet: {
+            newname: "Mixed Snow & Sleet",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.sleet.fill.png",
+        },
+        ScatteredShowers: {
+            newname: "Scattered Showers",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.drizzle.fill.png",
+        },
+        ScatteredSnowShowers: {
+            newname: "Scattered Snow Showers",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.snow.fill.png",
+        },
+        Sleet: {
+            newname: "Sleet",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.sleet.fill.png",
+        },
+        Snow: {
+            newname: "Snow",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/snow.png",
+        },
+        SnowShowers: {
+            newname: "Snow Showers",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.snow.fill.png",
+        },
+        Blizzard: {
+            newname: "Blizzard",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/wind.snow.png",
+        },
+        BlowingSnow: {
+            newname: "Blowing Snow",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/wind.snow.png",
+        },
+        FreezingDrizzle: {
+            newname: "Freezing Drizzle",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.sleet.fill.png",
+        },
+        FreezingRain: {
+            newname: "Freezing Rain",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.sleet.fill.png",
+        },
+        Frigid: {
+            newname: "Frigid",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/thermometer.snowflake.png",
+        },
+        Hail: {
+            newname: "Hail",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.hail.fill.png",
+        },
+        Hot: {
+            newname: "Hot",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/thermometer.sun.fill.png",
+        },
+        Hurricane: {
+            newname: "Hurricane",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/hurricane.png",
+        },
+        IsolatedThunderstorms: {
+            newname: "Isolated Thunderstorms",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.bolt.rain.fill.png",
+        },
+        SevereThunderstorm: {
+            newname: "Severe Thunderstorm",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.bolt.rain.fill.png",
+        },
+        Thunderstorm: {
+            newname: "Thunderstorm",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/cloud.bolt.rain.fill.png",
+        },
+        Tornado: {
+            newname: "Tornado",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/tornado.png",
+        },
+        TropicalStorm: {
+            newname: "Tropical Storm",
+            sfSymbol:
+                "https://raw.githubusercontent.com/andrewtavis/sf-symbols-online/refs/heads/master/glyphs/tropicalstorm.png",
+        },
+    };
+
+    async function fetchWeatherData() {
+        const city = document.getElementById("city").value.trim();
+        if (!city) {
+            alert("Please enter a city.");
+            return;
+        }
+        try {
+            const response = await fetch("/weather-grapher", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({city: city}),
+            });
+            const rep = await response.json();
+            displayCurrentWeather(rep.currentWeather);
+            plotHourlyForecastGraph(rep.forecastHourly.hours);
+            plotForecastGraph(rep.forecastDaily.days);
+        } catch (error) {
+            console.error("Error fetching weather data:", error);
+        }
+    }
+
+    function displayCurrentWeather(current) {
+        document.getElementById("currentWeather").classList.remove("hidden");
+        document.getElementById("currentDetails").innerHTML = `
+                <strong>Temperature:</strong> ${current.temperature} °C<br>
+                <strong>Feels Like:</strong> ${
+            current.temperatureApparent
+        } °C<br>
+                <strong>Condition:</strong> ${current.conditionCode}<br>
+                <strong>Wind:</strong> ${current.windSpeed} km/h<br>
+                <strong>Humidity:</strong> ${Math.round(
+            current.humidity * 100
+        )}%<br>
+                <strong>Pressure:</strong> ${current.pressure} hPa<br>
+            `;
+    }
+
+    function plotHourlyForecastGraph(hours) {
+        document.getElementById("hourlyForecast").classList.remove("hidden");
+
+        const now = new Date();
+        const currentHour = new Date(now.setMinutes(0, 0, 0));
+
+        const chartData = hours
+            .filter((hour) => {
+                const forecastStart = new Date(hour.forecastStart);
+                return forecastStart >= currentHour && forecastStart < new Date(currentHour.getTime() + 24 * 60 * 60 * 1000);
+            })
+            .map((hour) => ({
+                x: new Date(hour.forecastStart),
+                y: hour.temperature,
+                condition: conditions[hour.conditionCode].newname,
+                image: conditions[hour.conditionCode].sfSymbol,
+                feelsLike: hour.temperatureApparent,
+                humidity: Math.round(hour.humidity * 100),
+                pressure: hour.pressure,
+                precipitationChance: Math.round(hour.precipitationChance * 100),
+                windSpeed: hour.windSpeed,
+            }));
+
+        const chart = new CanvasJS.Chart("hourlyForecast", {
+            title: {
+                text: "Hourly Weather Forecast",
+                fontFamily: "proxima-nova",
+            },
+            axisY: {
+                suffix: " °C",
+                includeZero: false,
+                maximum: Math.max(...chartData.map((d) => d.y)) + 10,
+                minimum: Math.min(...chartData.map((d) => d.y)) - 5,
+                gridThickness: 0,
+            },
+            toolTip: {
+                shared: true,
+                content:
+                    "{condition} </br> <strong>Temperature:</strong> {y} °C </br> <strong>Feels Like:</strong> {feelsLike} °C </br> <strong>Humidity:</strong> {humidity}% </br> <strong>Pressure:</strong> {pressure} hPa </br> <strong>Wind:</strong> {windSpeed} km/h </br> <strong>Precipitation:</strong> {precipitationChance}%",
+            },
+            data: [
+                {
+                    type: "spline",
+                    dataPoints: chartData,
+                    color: "#91AAB1",
+                    indexLabelFormatter: hourlyFormatter,
+                    indexLabelFontSize: 10,
+                },
+            ],
+        });
+
+        chart.render();
+
+        addHourlyImages(chart, chartData);
+    }
+
+    function plotForecastGraph(days) {
+        document.getElementById("chartContainer").classList.remove("hidden");
+        const chartData = days.map((day) => ({
+            label: (function () {
+                const date = new Date(day.forecastStart);
+                const today = new Date();
+                return date.toDateString() === today.toDateString() ? "Today" : date.toLocaleDateString("en-US", {weekday: "long"});
+            })(),
+            y: [day.temperatureMin, day.temperatureMax],
+            condition: conditions[day.conditionCode].newname,
+            image: conditions[day.conditionCode].sfSymbol,
+            precipitationChance: Math.round(day.precipitationChance * 100)
+        }));
+
+        const chart = new CanvasJS.Chart("chartContainer", {
+            title: {
+                text: "10-Day Weather Forecast",
+                fontFamily: "proxima-nova",
+            },
+            axisY: {
+                suffix: " °C",
+                gridThickness: 0,
+                maximum: Math.max(...chartData.map((d) => d.y[1])) + 15,
+                minimum: Math.min(...chartData.map((d) => d.y[0])) - 5,
+            },
+            toolTip: {
+                shared: true,
+                content:
+                    "{condition} </br> <strong>Temperature: </strong> </br> Min: {y[0]} °C, Max: {y[1]} °C </br> <strong>Precipitation:</strong> {precipitationChance}%"
+            },
+            data: [
+                {
+                    type: "rangeSplineArea",
+                    indexLabelFormatter: formatter,
+                    color: "#91AAB1",
+                    fillOpacity: 0.1,
+                    dataPoints: chartData,
+                },
+            ],
+        });
+
+        chart.render();
+
+        addImages(chart, chartData);
+    }
+
+    function addImages(chart, chartData) {
+        const container = $("#chartContainer > .canvasjs-chart-container");
+        container.find(".weather-image").remove();
+
+        chartData.forEach((dataPoint, index) => {
+            const x = chart.axisX[0].convertValueToPixel(index);
+            const y = chart.axisY[0].convertValueToPixel(dataPoint.y[1]);
+
+            const img = $("<img>")
+                .attr("src", dataPoint.image)
+                .addClass("weather-image")
+                .css({
+                    position: "absolute",
+                    left: `${x - 20}px`,
+                    top: `${y - 100}px`,
+                    width: "40px",
+                    pointerEvents: "none",
+                });
+
+            container.append(img);
+        });
+    }
+
+    function addHourlyImages(chart, chartData) {
+        const container = $("#hourlyForecast > .canvasjs-chart-container");
+        container.find(".weather-image").remove();
+
+        chartData.forEach((dataPoint, index) => {
+            const x = chart.axisX[0].convertValueToPixel(dataPoint.x);
+            const y = chart.axisY[0].convertValueToPixel(dataPoint.y);
+
+            const img = $("<img>")
+                .attr("src", dataPoint.image)
+                .addClass("weather-image")
+                .css({
+                    position: "absolute",
+                    left: `${x - 12.5}px`,
+                    top: `${y - 80}px`,
+                    width: "25px",
+                    pointerEvents: "none",
+                });
+
+            container.append(img);
+        });
+    }
+
+    $(window).resize(function () {
+        if (chart) addImages(chart, chartData);
+    });
+
+    function formatter(e) {
+        if (e.index === 0 && e.dataPoint.x === 0) {
+            return " Min " + e.dataPoint.y[e.index] + "°C";
+        } else if (e.index == 1 && e.dataPoint.x === 0) {
+            return " Max " + e.dataPoint.y[e.index] + "°C";
+        } else {
+            return e.dataPoint.y[e.index] + "°C";
+        }
+    }
+
+    function hourlyFormatter(e) {
+        if (e.dataPoint.x === 0) {
+            return " Temp " + e.dataPoint.y[e.index] + "°C";
+        } else {
+            return e.dataPoint.y + "°C";
+        }
+    }
+</script>
+</body>
+</html>
