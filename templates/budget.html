@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISU Artifact 3 - Financial Budgeter</title>
+
+    <link rel="stylesheet" href="https://use.typekit.net/cgs2wwr.css">
+
+    <style>
+        body {
+            font-family: 'proxima-nova', sans-serif;
+            background-color: #eef2f7;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 2.5rem;
+            color: #2c3e50;
+        }
+
+        .menu {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #3498db;
+            border-radius: 8px;
+            overflow: hidden;
+            text-align: center;
+            margin: 0 auto 20px;
+            padding: 0;
+            width: fit-content;
+            position: relative;
+
+        }
+
+        .menu a {
+            display: inline-block;
+            color: white;
+            padding: 14px 16px;
+            text-decoration: none;
+            font-weight: 600;
+            font-family: 'proxima-nova', sans-serif;
+        }
+
+        .menu a:hover {
+            background-color: #2980b9;
+        }
+
+        .section {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            margin-bottom: 15px;
+            color: #34495e;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+
+        h3 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.5rem;
+            color: #442c50;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            background-color: #f9f9f9;
+            font-family: 'proxima-nova', sans-serif;
+        }
+
+        input {
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-family: 'proxima-nova', sans-serif;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+        }
+
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .green {
+            background-color: #d4edda;
+        }
+
+        .red {
+            background-color: #f8d7da;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>ISU Artifact 3 - Financial Budgeter</h1>
+
+    <a href="https://github.com/ryanidk/ISU-Artifact-3"><h3>View Source Code</h3></a>
+
+    <div class="menu">
+        <a href=".">Budgeting</a>
+        <a href="/appreciation-depreciation">Appreciation/Depreciation/Compound Interest Calculator</a>
+        <a href="/stocks">Stock Grapher</a>
+    </div>
+
+    <div class="section">
+        <h2>Dashboard</h2>
+        <p><strong>Current Month:</strong> <span id="current-month"></span></p>
+        <p><strong>Available Funds:</strong> <span id="available-funds">0.00</span></p>
+    </div>
+
+    <div class="section">
+        <h2>Add Transaction</h2>
+        <form id="budget-form">
+            <label for="date">Date:</label>
+            <input type="date" id="date" required>
+
+            <label for="payee">Payee:</label>
+            <input type="text" id="payee" placeholder="e.g., Walmart, Loblaws, Hydro" required>
+
+            <label for="notes">Notes:</label>
+            <input type="text" id="notes" placeholder="e.g., Hydro bill for February">
+
+            <label for="category">Category:</label>
+            <select id="category">
+                <option value="Income">Income</option>
+                <option value="Savings">Savings</option>
+                <option value="Rent">Rent</option>
+                <option value="Food">Food</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Utilities">Utilities</option>
+                <option value="Miscellaneous">Miscellaneous</option>
+            </select>
+
+            <label for="amount">Amount:</label>
+            <input type="number" step="0.01" id="amount" placeholder="Enter a number" required>
+            <button type="submit">Add Transaction</button>
+        </form>
+    </div>
+
+    <div class="section">
+        <h2>Transaction History</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>Date</th>
+                <th>Payee</th>
+                <th>Notes</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody id="transactions-table"></tbody>
+        </table>
+    </div>
+    <p>Ryan L 2025</p>
+</div>
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        loadTransactions();
+        updateDashboard();
+
+        document.getElementById("budget-form").addEventListener("submit", function (event) {
+            event.preventDefault();
+            addTransaction();
+        });
+    });
+
+    function addTransaction() {
+        let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+
+        const transaction = {
+            date: document.getElementById("date").value,
+            payee: document.getElementById("payee").value,
+            notes: document.getElementById("notes").value,
+            category: document.getElementById("category").value,
+            amount: parseFloat(document.getElementById("amount").value)
+        };
+
+        transactions.push(transaction);
+        localStorage.setItem("transactions", JSON.stringify(transactions));
+
+        loadTransactions();
+        updateDashboard();
+    }
+
+    function loadTransactions() {
+        let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+
+        transactions.sort((a, b) => b.date.localeCompare(a.date));
+
+        let transactionsTable = document.getElementById("transactions-table");
+        transactionsTable.innerHTML = "";
+
+        transactions.forEach((transaction, index) => {
+            let rowClass = (transaction.category === "Income" || transaction.category === "Savings") ? "green" : "red";
+
+            let row = `<tr class="${rowClass}">
+            <td>${transaction.date}</td>
+            <td>${transaction.payee}</td>
+            <td>${transaction.notes}</td>
+            <td>${transaction.category}</td>
+            <td>${transaction.amount.toFixed(2)}</td>
+            <td><button class="delete-btn" onclick="deleteTransaction(${index})">Delete</button></td>
+        </tr>`;
+
+            transactionsTable.innerHTML += row;
+        });
+    }
+
+    function deleteTransaction(index) {
+        let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+        transactions.splice(index, 1);
+        localStorage.setItem("transactions", JSON.stringify(transactions));
+        loadTransactions();
+        updateDashboard();
+    }
+
+    function updateDashboard() {
+        let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+
+        let income = transactions.filter(t => t.category === "Income").reduce((sum, t) => sum + t.amount, 0);
+        let savings = transactions.filter(t => t.category === "Savings").reduce((sum, t) => sum + t.amount, 0);
+        let expenses = transactions.filter(t => !["Income", "Savings"].includes(t.category)).reduce((sum, t) => sum + t.amount, 0);
+
+        let availableFunds = income + savings - expenses; // negative expenses
+
+        document.getElementById("available-funds").innerText = availableFunds.toFixed(2);
+        document.getElementById("current-month").innerText = new Date().toLocaleString("default", {
+            month: "long",
+            year: "numeric"
+        });
+    }
+</script>
+
+</body>
+</html>

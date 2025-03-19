@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISU Artifact 3 - Financial Appreciation/Depreciation/Compound Interest Calculator</title>
+
+    <link rel="stylesheet" href="https://use.typekit.net/cgs2wwr.css">
+    <script src="{{ url_for('static', filename='highcharts.js') }}"></script>
+
+    <style>
+        body {
+            font-family: 'proxima-nova', sans-serif;
+            background-color: #eef2f7;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 2.5rem;
+            color: #2c3e50;
+        }
+
+        .menu {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #3498db;
+            border-radius: 8px;
+            overflow: hidden;
+            text-align: center;
+            margin: 0 auto 20px;
+            padding: 0;
+            width: fit-content;
+            position: relative;
+        }
+
+        .menu a {
+            display: inline-block;
+            color: white;
+            padding: 14px 16px;
+            text-decoration: none;
+            font-weight: 600;
+            font-family: 'proxima-nova', sans-serif;
+        }
+
+        .menu a:hover {
+            background-color: #2980b9;
+        }
+
+        .section {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            margin-bottom: 15px;
+            color: #34495e;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+
+        h3 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.5rem;
+            color: #442c50;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            background-color: #f9f9f9;
+            font-family: 'proxima-nova', sans-serif;
+        }
+
+        input {
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-family: 'proxima-nova', sans-serif;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>ISU Artifact 3 - Financial Appreciation/Depreciation/Compound Interest Calculator</h1>
+
+    <a href="https://github.com/ryanidk/ISU-Artifact-3"><h3>View Source Code</h3></a>
+
+    <div class="menu">
+        <a href="/">Budgeting</a>
+        <a href="/appreciation-depreciation">Appreciation/Depreciation/Compound Interest Calculator</a>
+        <a href="/stocks">Stock Grapher</a>
+    </div>
+
+    <div class="section">
+        <h2>Appreciation/Depreciation/Compound Interest Calculator</h2>
+
+        <label for="initial-value">Initial Amount:</label>
+        <input type="number" id="initial-value" placeholder="e.g., 1000">
+
+        <label for="rate">Rate:</label>
+        <input type="number" id="rate" placeholder="e.g., 5%">
+
+        <label for="years">Years:</label>
+        <input type="number" id="years" placeholder="e.g., 2">
+
+        <button onclick="calculate()">Calculate</button>
+    </div>
+
+    <div class="section hidden" id="resultsection">
+        <h2>Results</h2>
+        <table id="results-table">
+            <thead>
+                <tr>
+                    <th>Year</th>
+                    <th>Amount ($)</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="section hidden" id="chartsection">
+        <h2>Graph</h2>
+        <div id="chart-container" style="height: 400px;"></div>
+    </div>
+
+    <p>Ryan L 2025</p>
+</div>
+
+<script>
+    document.getElementById('current-month').innerText = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+
+    function calculate() {
+        document.getElementById("chartsection").classList.remove('hidden');
+        document.getElementById("resultsection").classList.remove('hidden');
+
+        let initialValue = parseFloat(document.getElementById('initial-value').value);
+        let rate = parseFloat(document.getElementById('rate').value) / 100;
+        let years = parseInt(document.getElementById('years').value);
+        let resultsTable = document.getElementById('results-table').getElementsByTagName('tbody')[0];
+        resultsTable.innerHTML = "";
+
+        let data = [];
+        let value = initialValue;
+
+        for (let i = 0; i <= years; i++) {
+            let row = resultsTable.insertRow();
+            row.insertCell(0).innerText = i;
+            row.insertCell(1).innerText = value.toFixed(2);
+
+            data.push([i, parseFloat(value.toFixed(2))]);
+
+            value *= (1 + rate);
+        }
+
+        Highcharts.chart('chart-container', {
+            chart: {
+                type: 'line'
+            },
+            title: {
+                text: 'Appreciation/Depreciation/Compound Interest Over Time'
+            },
+            xAxis: {
+                title: {
+                    text: 'Years'
+                },
+                categories: data.map(item => item[0])
+            },
+            yAxis: {
+                title: {
+                    text: 'Amount ($)'
+                }
+            },
+            series: [{
+                name: 'Amount Over Time',
+                data: data.map(item => item[1]),
+                color: rate >= 0 ? '#27ae60' : '#e74c3c'
+            }]
+        });
+    }
+
+    calculate();
+</script>
+
+</body>
+</html>
